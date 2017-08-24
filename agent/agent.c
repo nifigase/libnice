@@ -2675,6 +2675,130 @@ static void _upnp_error_mapping_port (GUPnPSimpleIgd *self, GError *error,
 #endif
 
 NICEAPI_EXPORT gboolean
+nice_agent_force_candidate(
+    NiceAgent *agent, guint stream_id, NiceAddress *addr, guint port)
+{
+  guint cid;
+  NiceStream *stream;
+  gboolean ret = TRUE;
+
+  g_return_val_if_fail (NICE_IS_AGENT (agent), FALSE);
+  g_return_val_if_fail (stream_id >= 1, FALSE);
+
+  agent_lock (agent);
+
+  stream = agent_find_stream (agent, stream_id);
+  if (stream == NULL) {
+    agent_unlock_and_emit (agent);
+    return FALSE;
+  }
+
+  if (stream->gathering_started) {
+    /* Stream is already gathering, ignore this call */
+    agent_unlock_and_emit (agent);
+    return TRUE;
+  }
+
+  for (cid = 1; cid <= stream->n_components; cid++) {
+    NiceComponent *component = nice_stream_find_component_by_id (stream, cid);
+    NiceCandidate *host_candidate = NULL;
+    HostCandidateResult res;
+
+    if (component == NULL)
+      continue;
+
+    nice_debug ("Agent %p: Trying to create host candidate on port %d", agent, port);
+    nice_address_set_port (addr, port);
+    res =  discovery_add_local_host_candidate (agent, stream->id, cid,
+          addr, NICE_CANDIDATE_TRANSPORT_UDP, &host_candidate);
+
+    if (res == HOST_CANDIDATE_REDUNDANT) {
+      nice_debug ("Agent %p: Ignoring local candidate, it's redundant",
+                  agent);
+      ret = FALSE;
+      goto error;
+    } else if (res == HOST_CANDIDATE_FAILED) {
+      nice_debug ("Agent %p: Could ot retrieive component %d/%d", agent,
+          stream->id, cid);
+      ret = FALSE;
+      goto error;
+    } else if (res == HOST_CANDIDATE_CANT_CREATE_SOCKET) {
+      if (nice_debug_is_enabled ()) {
+        gchar ip[NICE_ADDRESS_STRING_LEN];
+        nice_address_to_string (addr, ip);
+        nice_debug ("Agent %p: Unable to add local host candidate %s for"
+            " s%d:%d. Invalid interface?", agent, ip, stream->id,
+            component->id);
+      }
+      ret = FALSE;
+      goto error;
+    }
+
+    //OK
+    nice_address_set_port (addr, 0);
+    if (agent->reliable)
+      nice_socket_set_writable_callback (host_candidate->sockptr,
+          _tcp_sock_is_writable, component);
+  }
+
+  stream->gathering = TRUE;
+  stream->gathering_started = TRUE;
+
+  /* Only signal the new candidates after we're sure that the gathering was
+   * succesfful. But before sending gathering-done */
+  for (cid = 1; cid <= stream->n_components; cid++) {
+    NiceComponent *component = nice_stream_find_component_by_id (stream, cid);
+    for (GSList* i = component->local_candidates; i; i = i->next) {
+      NiceCandidate *candidate = i->data;
+
+      if (agent->force_relay && candidate->type != NICE_CANDIDATE_TYPE_RELAYED)
+        continue;
+
+      agent_signal_new_candidate (agent, candidate);
+    }
+  }
+
+  /* note: no async discoveries pending, signal that we are ready */
+  if (agent->discovery_unsched_items == 0 &&
+#ifdef HAVE_GUPNP
+      agent->upnp_mapping == NULL) {
+#else
+      TRUE) {
+#endif
+    nice_debug ("Agent %p: Candidate gathering FINISHED, no scheduled items.",
+        agent);
+    agent_gathering_done (agent);
+  } else if (agent->discovery_unsched_items) {
+    discovery_schedule (agent);
+  }
+
+error:
+  if (ret == FALSE) {
+    priv_stop_upnp (agent);
+    for (cid = 1; cid <= stream->n_components; cid++) {
+      NiceComponent *component = nice_stream_find_component_by_id (stream, cid);
+
+      nice_component_free_socket_sources (component);
+
+      for (GSList* i = component->local_candidates; i; i = i->next) {
+        NiceCandidate *candidate = i->data;
+
+        agent_remove_local_candidate (agent, candidate);
+
+        nice_candidate_free (candidate);
+      }
+      g_slist_free (component->local_candidates);
+      component->local_candidates = NULL;
+    }
+    discovery_prune_stream (agent, stream_id);
+  }
+
+  agent_unlock_and_emit (agent);
+
+  return ret;
+}
+
+NICEAPI_EXPORT gboolean
 nice_agent_gather_candidates (
   NiceAgent *agent,
   guint stream_id)

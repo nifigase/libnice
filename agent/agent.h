@@ -535,6 +535,26 @@ gboolean nice_agent_set_relay_info(
     NiceRelayType type);
 
 /**
+ * nice_agent_force_candidate:
+ * @agent: The #NiceAgent object
+ * @stream_id: The ID of the stream to start
+ * @addr: local address of candidate
+ * @port: local port for candidate.
+ *
+ * Allocate predefined local candidate on known address and known port
+ * and start the remote candidate gathering process.
+ * Once done, #NiceAgent::candidate-gathering-done is called for the stream.
+ * As soon as this function is called, #NiceAgent::new-candidate signals may be
+ * emitted, even before this function returns.
+ * This call replaces nice_agent_force_candidate() call.
+ *
+ * Returns: %FALSE if the stream ID is invalid or if a host candidate couldn't
+ * be allocated on the requested interface/port; %TRUE otherwise
+ */
+gboolean nice_agent_force_candidate(
+    NiceAgent *agent, guint stream_id, NiceAddress *addr, guint port);
+
+/**
  * nice_agent_gather_candidates:
  * @agent: The #NiceAgent object
  * @stream_id: The ID of the stream to start
