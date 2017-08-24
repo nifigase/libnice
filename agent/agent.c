@@ -2675,8 +2675,7 @@ static void _upnp_error_mapping_port (GUPnPSimpleIgd *self, GError *error,
 #endif
 
 NICEAPI_EXPORT gboolean
-nice_agent_force_candidate(
-    NiceAgent *agent, guint stream_id, NiceAddress *addr, guint port)
+nice_agent_force_candidate(NiceAgent *agent, guint stream_id, NiceAddress *addr)
 {
   guint cid;
   NiceStream *stream;
@@ -2707,8 +2706,8 @@ nice_agent_force_candidate(
     if (component == NULL)
       continue;
 
-    nice_debug ("Agent %p: Trying to create host candidate on port %d", agent, port);
-    nice_address_set_port (addr, port);
+    nice_debug ("Agent %p: Trying to create host candidate on port %d",
+        agent, nice_address_get_port (addr));
     res =  discovery_add_local_host_candidate (agent, stream->id, cid,
           addr, NICE_CANDIDATE_TRANSPORT_UDP, &host_candidate);
 

@@ -539,7 +539,6 @@ gboolean nice_agent_set_relay_info(
  * @agent: The #NiceAgent object
  * @stream_id: The ID of the stream to start
  * @addr: local address of candidate
- * @port: local port for candidate.
  *
  * Allocate predefined local candidate on known address and known port
  * and start the remote candidate gathering process.
@@ -552,7 +551,7 @@ gboolean nice_agent_set_relay_info(
  * be allocated on the requested interface/port; %TRUE otherwise
  */
 gboolean nice_agent_force_candidate(
-    NiceAgent *agent, guint stream_id, NiceAddress *addr, guint port);
+    NiceAgent *agent, guint stream_id, NiceAddress *addr);
 
 /**
  * nice_agent_gather_candidates:
