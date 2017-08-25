@@ -2747,7 +2747,8 @@ nice_agent_force_candidate(NiceAgent *agent, guint stream_id, NiceAddress *addr)
    * succesfful. But before sending gathering-done */
   for (cid = 1; cid <= stream->n_components; cid++) {
     NiceComponent *component = nice_stream_find_component_by_id (stream, cid);
-    for (GSList* i = component->local_candidates; i; i = i->next) {
+    GSList *i;
+    for (i = component->local_candidates; i; i = i->next) {
       NiceCandidate *candidate = i->data;
 
       if (agent->force_relay && candidate->type != NICE_CANDIDATE_TYPE_RELAYED)
@@ -2776,10 +2777,10 @@ error:
     priv_stop_upnp (agent);
     for (cid = 1; cid <= stream->n_components; cid++) {
       NiceComponent *component = nice_stream_find_component_by_id (stream, cid);
+      GSList *i;
 
       nice_component_free_socket_sources (component);
-
-      for (GSList* i = component->local_candidates; i; i = i->next) {
+      for (i = component->local_candidates; i; i = i->next) {
         NiceCandidate *candidate = i->data;
 
         agent_remove_local_candidate (agent, candidate);
