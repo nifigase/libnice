@@ -589,6 +589,11 @@ nice_agent_gather_candidates (
   NiceAgent *agent,
   guint stream_id);
 
+gboolean
+nice_agent_gather_candidates_with_port (
+  NiceAgent *agent,
+  guint stream_id, guint port);
+
 /**
  * nice_agent_set_remote_credentials:
  * @agent: The #NiceAgent Object

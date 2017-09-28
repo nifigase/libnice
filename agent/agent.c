@@ -2803,6 +2803,14 @@ nice_agent_gather_candidates (
   NiceAgent *agent,
   guint stream_id)
 {
+  return nice_agent_gather_candidates_with_port (agent, stream_id, 0);
+}
+
+NICEAPI_EXPORT gboolean
+nice_agent_gather_candidates_with_port (
+  NiceAgent *agent,
+  guint stream_id, guint port)
+{
   guint cid;
   GSList *i;
   NiceStream *stream;
@@ -2902,8 +2910,6 @@ nice_agent_gather_candidates (
 
       for (add_type = ADD_HOST_MIN; add_type <= ADD_HOST_MAX; add_type++) {
         NiceCandidateTransport transport;
-        guint current_port;
-        guint start_port;
         HostCandidateResult res = HOST_CANDIDATE_CANT_CREATE_SOCKET;
 
         if ((agent->use_ice_udp == FALSE && add_type == ADD_HOST_UDP) ||
@@ -2923,23 +2929,32 @@ nice_agent_gather_candidates (
             break;
         }
 
-        start_port = component->min_port;
-        if(component->min_port != 0) {
-          start_port = nice_rng_generate_int(agent->rng, component->min_port, component->max_port+1);
-        }
-        current_port = start_port;
-
         host_candidate = NULL;
-        while (res == HOST_CANDIDATE_CANT_CREATE_SOCKET) {
-          nice_debug ("Agent %p: Trying to create host candidate on port %d", agent, current_port);
-          nice_address_set_port (addr, current_port);
-          res =  discovery_add_local_host_candidate (agent, stream->id, cid,
+        if (port > 0) {
+          nice_debug ("Agent %p: Trying to create host candidate on fixed port %d", agent, port);
+          nice_address_set_port (addr, port);
+          res = discovery_add_local_host_candidate (agent, stream->id, cid,
               addr, transport, &host_candidate);
-          if (current_port > 0)
-            current_port++;
-          if (current_port > component->max_port) current_port = component->min_port;
-          if (current_port == 0 || current_port == start_port)
-            break;
+        } else {
+          guint start_port = component->min_port;
+          guint current_port;
+
+          if(component->min_port != 0) {
+            start_port = nice_rng_generate_int(agent->rng, component->min_port, component->max_port+1);
+          }
+          current_port = start_port;
+
+          while (res == HOST_CANDIDATE_CANT_CREATE_SOCKET) {
+            nice_debug ("Agent %p: Trying to create host candidate on port %d", agent, current_port);
+            nice_address_set_port (addr, current_port);
+            res =  discovery_add_local_host_candidate (agent, stream->id, cid,
+                addr, transport, &host_candidate);
+            if (current_port > 0)
+              current_port++;
+            if (current_port > component->max_port) current_port = component->min_port;
+            if (current_port == 0 || current_port == start_port)
+              break;
+          }
         }
 
         if (res == HOST_CANDIDATE_REDUNDANT) {
@@ -2963,7 +2978,6 @@ nice_agent_gather_candidates (
 
         found_local_address = TRUE;
         nice_address_set_port (addr, 0);
-
 
         if (agent->reliable)
           nice_socket_set_writable_callback (host_candidate->sockptr,
