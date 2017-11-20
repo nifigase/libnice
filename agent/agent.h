@@ -554,6 +554,28 @@ gboolean nice_agent_force_candidate(
     NiceAgent *agent, guint stream_id, NiceAddress *addr);
 
 /**
+ * nice_agent_force_candidate_component
+ * @agent: The #NiceAgent object
+ * @stream_id: The ID of the stream to start
+ * @cid: The ID of the component of the stream
+ * @addr: local address of candidate
+ *
+ * Allocate predefined local candidate for given component only
+ * on known address and known port
+ * and start the remote candidate gathering process.
+ * Once done, #NiceAgent::candidate-gathering-done is called for the stream.
+ * As soon as this function is called, #NiceAgent::new-candidate signals may be
+ * emitted, even before this function returns.
+ * This call replaces nice_agent_force_candidate() call.
+ *
+ * Returns: %FALSE if the stream ID is invalid or if a host candidate couldn't
+ * be allocated on the requested interface/port; %TRUE otherwise
+ */
+gboolean
+nice_agent_force_candidate_component(
+    NiceAgent *agent, guint stream_id, guint cid, NiceAddress *addr);
+
+/**
  * nice_agent_gather_candidates:
  * @agent: The #NiceAgent object
  * @stream_id: The ID of the stream to start
@@ -589,10 +611,14 @@ nice_agent_gather_candidates (
   NiceAgent *agent,
   guint stream_id);
 
+/**
+ * nice_agent_gather_candidates_with_port
+ * @component_id: The ID of the component of the stream
+ */
 gboolean
 nice_agent_gather_candidates_with_port (
   NiceAgent *agent,
-  guint stream_id, guint port);
+  guint stream_id, guint component_id, guint port);
 
 /**
  * nice_agent_set_remote_credentials:
