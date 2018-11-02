@@ -309,8 +309,9 @@ typedef enum
   /* 0x8051-0x8053 */      /* reserved */
   STUN_ATTRIBUTE_CANDIDATE_IDENTIFIER=0x8054,     /* MS-ICE2 */
   /* 0x8055-0x806F */      /* reserved */
-  STUN_ATTRIBUTE_MS_IMPLEMENTATION_VERSION=0x8070 /* MS-ICE2 */
+  STUN_ATTRIBUTE_MS_IMPLEMENTATION_VERSION=0x8070, /* MS-ICE2 */
   /* 0x8071-0xFFFF */      /* reserved */
+  STUN_ATTRIBUTE_NOMINATION=0xC001 /* https://tools.ietf.org/html/draft-thatcher-ice-renomination-00 */
 } StunAttribute;
 
 

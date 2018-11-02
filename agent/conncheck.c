@@ -2264,7 +2264,7 @@ static guint priv_prune_pending_checks (NiceStream *stream, guint component_id)
     if (p->component_id == component_id) {
       if (p->state == NICE_CHECK_FROZEN ||
 	  p->state == NICE_CHECK_WAITING) {
-	p->state = NICE_CHECK_CANCELLED;
+        p->state = NICE_CHECK_CANCELLED;
         nice_debug ("Agent XXX : pair %p state CANCELED", p);
       }
 
@@ -3465,7 +3465,7 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
     nice_debug ("Agent %p : Integrity check failed.", agent);
 
     if (stun_agent_init_error (&component->stun_agent, &msg, rbuf, rbuf_len,
-            &req, STUN_ERROR_UNAUTHORIZED)) {
+        &req, STUN_ERROR_UNAUTHORIZED)) {
       rbuf_len = stun_agent_finish_message (&component->stun_agent, &msg, NULL, 0);
       if (rbuf_len > 0 && agent->compatibility != NICE_COMPATIBILITY_MSN &&
           agent->compatibility != NICE_COMPATIBILITY_OC2007)
@@ -3476,17 +3476,17 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
   if (valid == STUN_VALIDATION_UNAUTHORIZED_BAD_REQUEST) {
     nice_debug ("Agent %p : Integrity check failed - bad request.", agent);
     if (stun_agent_init_error (&component->stun_agent, &msg, rbuf, rbuf_len,
-            &req, STUN_ERROR_BAD_REQUEST)) {
+        &req, STUN_ERROR_BAD_REQUEST)) {
       rbuf_len = stun_agent_finish_message (&component->stun_agent, &msg, NULL, 0);
       if (rbuf_len > 0 && agent->compatibility != NICE_COMPATIBILITY_MSN &&
-	  agent->compatibility != NICE_COMPATIBILITY_OC2007)
+          agent->compatibility != NICE_COMPATIBILITY_OC2007)
         agent_socket_send (nicesock, from, rbuf_len, (const gchar*)rbuf);
     }
     return TRUE;
   }
 
   username = (uint8_t *) stun_message_find (&req, STUN_ATTRIBUTE_USERNAME,
-					    &username_len);
+      &username_len);
 
   for (i = component->remote_candidates; i; i = i->next) {
     NiceCandidate *cand = i->data;
@@ -3508,7 +3508,7 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
       agent->compatibility == NICE_COMPATIBILITY_OC2007) {
     /* We need to find which local candidate was used */
     for (i = component->remote_candidates;
-         i != NULL && remote_candidate2 == NULL; i = i->next) {
+        i != NULL && remote_candidate2 == NULL; i = i->next) {
       for (j = component->local_candidates; j; j = j->next) {
         gboolean inbound = TRUE;
         NiceCandidate *rcand = i->data;
@@ -3573,22 +3573,22 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
       if (local_candidate && remote_candidate2) {
         gsize key_len;
 
-	if (agent->compatibility == NICE_COMPATIBILITY_MSN) {
+        if (agent->compatibility == NICE_COMPATIBILITY_MSN) {
           username = (uint8_t *) stun_message_find (&req,
-	  STUN_ATTRIBUTE_USERNAME, &username_len);
-	  uname_len = priv_create_username (agent, stream,
+              STUN_ATTRIBUTE_USERNAME, &username_len);
+          uname_len = priv_create_username (agent, stream,
               component->id,  remote_candidate2, local_candidate,
-	      uname, sizeof (uname), FALSE);
-	  memcpy (username, uname, MIN (uname_len, username_len));
+              uname, sizeof (uname), FALSE);
+          memcpy (username, uname, MIN (uname_len, username_len));
 
-	  req.key = g_base64_decode ((gchar *) remote_candidate2->password,
+          req.key = g_base64_decode ((gchar *) remote_candidate2->password,
               &key_len);
           req.key_len = key_len;
-	} else if (agent->compatibility == NICE_COMPATIBILITY_OC2007) {
+        } else if (agent->compatibility == NICE_COMPATIBILITY_OC2007) {
           req.key = g_base64_decode ((gchar *) local_candidate->password,
               &key_len);
           req.key_len = key_len;
-	}
+        }
       } else {
         nice_debug ("Agent %p : received MSN incoming check from unknown remote candidate. "
             "Ignoring request", agent);
@@ -3627,9 +3627,9 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
         agent_signal_initial_binding_request_received (agent, stream);
 
       if (component->remote_candidates && remote_candidate == NULL) {
-	nice_debug ("Agent %p : No matching remote candidate for incoming check ->"
+        nice_debug ("Agent %p : No matching remote candidate for incoming check ->"
             "peer-reflexive candidate.", agent);
-	remote_candidate = discovery_learn_remote_peer_reflexive_candidate (
+        remote_candidate = discovery_learn_remote_peer_reflexive_candidate (
             agent, stream, component, priority, from, nicesock,
             local_candidate,
             remote_candidate2 ? remote_candidate2 : remote_candidate);
@@ -3669,36 +3669,81 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
       return FALSE;
     }
   } else {
-      /* case 2: not a new request, might be a reply...  */
-      gboolean trans_found = FALSE;
+    /* case 2: not a new request, might be a reply...  */
+    gboolean trans_found = FALSE;
 
-      /* note: ICE sect 7.1.2. "Processing the Response" (ID-19) */
+    /* note: ICE sect 7.1.2. "Processing the Response" (ID-19) */
 
-      /* step: let's try to match the response to an existing check context */
-      if (trans_found != TRUE)
-        trans_found = priv_map_reply_to_conn_check_request (agent, stream,
-	    component, nicesock, from, local_candidate, remote_candidate, &req);
+    /* step: let's try to match the response to an existing check context */
+    if (trans_found != TRUE)
+      trans_found = priv_map_reply_to_conn_check_request (agent, stream,
+          component, nicesock, from, local_candidate, remote_candidate, &req);
 
-      /* step: let's try to match the response to an existing discovery */
-      if (trans_found != TRUE)
-        trans_found = priv_map_reply_to_discovery_request (agent, &req);
+    /* step: let's try to match the response to an existing discovery */
+    if (trans_found != TRUE)
+      trans_found = priv_map_reply_to_discovery_request (agent, &req);
 
-      /* step: let's try to match the response to an existing turn allocate */
-      if (trans_found != TRUE)
-        trans_found = priv_map_reply_to_relay_request (agent, &req);
+    /* step: let's try to match the response to an existing turn allocate */
+    if (trans_found != TRUE)
+      trans_found = priv_map_reply_to_relay_request (agent, &req);
 
-      /* step: let's try to match the response to an existing turn refresh */
-      if (trans_found != TRUE)
-        trans_found = priv_map_reply_to_relay_refresh (agent, &req);
+    /* step: let's try to match the response to an existing turn refresh */
+    if (trans_found != TRUE)
+      trans_found = priv_map_reply_to_relay_refresh (agent, &req);
 
-      /* step: let's try to match the response to an existing keepalive conncheck */
-      if (trans_found != TRUE)
-        trans_found = priv_map_reply_to_keepalive_conncheck (agent, component,
-            &req);
+    /* step: let's try to match the response to an existing keepalive conncheck */
+    if (trans_found != TRUE)
+      trans_found = priv_map_reply_to_keepalive_conncheck (agent, component,
+          &req);
 
-      if (trans_found != TRUE)
-        nice_debug ("Agent %p : Unable to match to an existing transaction, "
-            "probably a keepalive.", agent);
+    if (trans_found != TRUE)
+      nice_debug ("Agent %p : Unable to match to an existing transaction, "
+          "probably a keepalive.", agent);
+  }
+
+  /* RENOMINATION attribute support */
+  while (!agent->controlling_mode && agent->compatibility == NICE_COMPATIBILITY_RFC5245) {
+    uint32_t nom_value = 0;
+    uint16_t nom_len = 0;
+    const void *value = stun_message_find (&req, STUN_ATTRIBUTE_NOMINATION, &nom_len);
+    if (nom_len == 0) {
+      break;
+    }
+    if (nom_len == 4) {
+      memcpy (&nom_value, value, 4);
+      nom_value = ntohl (nom_value);
+    } else {
+      nice_debug ("Agent %p : received NOMINATION attr with incorrect octet length %u, expected 4 bytes",
+          agent, nom_len);
+      break;
+    }
+
+    if (nice_debug_is_enabled ()) {
+      gchar remote_str[INET6_ADDRSTRLEN];
+      nice_address_to_string(&remote_candidate->addr, remote_str);
+      nice_debug ("Agent %p : received NOMINATION attr for remote candidate [%s]:%u, value is %u",
+          agent, remote_str, nice_address_get_port (&remote_candidate->addr), nom_value);
+    }
+
+    /*
+     * If another pair is SELECTED, change this pair's priority to be greater than
+     * selected pair's priority so this pair gets SELECTED!
+     */
+    if (component->selected_pair.priority &&
+        component->selected_pair.remote && component->selected_pair.remote != remote_candidate &&
+        component->selected_pair.local && component->selected_pair.local != local_candidate) {
+      for (i = stream->conncheck_list; i; i = i->next) {
+        CandidateCheckPair *pair = i->data;
+        if (pair->local == local_candidate && pair->remote == remote_candidate) {
+          if (pair->valid) {
+            pair->priority = component->selected_pair.priority + 1;
+          }
+          break;
+        }
+      }
+    }
+    priv_mark_pair_nominated (agent, stream, component, local_candidate, remote_candidate);
+    break;
   }
 
   return TRUE;
