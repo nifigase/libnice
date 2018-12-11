@@ -3702,7 +3702,8 @@ gboolean conn_check_handle_inbound_stun (NiceAgent *agent, NiceStream *stream,
   }
 
   /* RENOMINATION attribute support */
-  while (!agent->controlling_mode && agent->compatibility == NICE_COMPATIBILITY_RFC5245) {
+  while (!agent->controlling_mode && agent->compatibility == NICE_COMPATIBILITY_RFC5245 &&
+      remote_candidate && local_candidate) {
     uint32_t nom_value = 0;
     uint16_t nom_len = 0;
     const void *value = stun_message_find (&req, STUN_ATTRIBUTE_NOMINATION, &nom_len);
