@@ -10,7 +10,13 @@ SUBDIRS = . tools tests
 
 include $(top_srcdir)/common.mk
 
-AM_CFLAGS = -std=gnu99 -DG_LOG_DOMAIN=\"libnice-stun\" $(LIBNICE_CFLAGS)
+AM_CFLAGS = \
+	-std=gnu99 \
+	-DG_LOG_DOMAIN=\"libnice-stun\" \
+	$(LIBNICE_CFLAGS) \
+	$(GNUTLS_CFLAGS) \
+	$(OPENSSL_INCLUDES) \
+	$(NULL)
 AM_CPPFLAGS = -I$(top_srcdir)
 
 if WINDOWS
@@ -24,8 +30,6 @@ libstun_la_SOURCES = constants.h \
 	stunmessage.c stunmessage.h \
 	stun5389.c stun5389.h \
 	stuncrc32.c stuncrc32.h \
-	sha1.c sha1.h \
-	md5.c md5.h \
 	rand.c rand.h \
 	stunhmac.c stunhmac.h \
 	utils.c  utils.h \
@@ -35,9 +39,9 @@ libstun_la_SOURCES = constants.h \
 	usages/turn.c usages/turn.h \
 	usages/timer.c usages/timer.h
 
-libstun_la_LIBADD = $(LIBRT)
+libstun_la_LIBADD = $(LIBRT) $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(OPENSSL_LDFLAGS)
 
-EXTRA_DIST = win32_common.h
+EXTRA_DIST = win32_common.h meson.build
 
 libstun_la_includedir=$(includedir)/stun
 libstun_la_include_HEADERS = stunagent.h stunmessage.h win32_common.h debug.h constants.h

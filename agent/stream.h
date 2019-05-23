@@ -87,6 +87,7 @@ struct _NiceStream {
   gchar remote_password[NICE_STREAM_MAX_PWD];
   gboolean gathering;
   gboolean gathering_started;
+  gboolean peer_gathering_done;
   gint tos;
   guint tick_counter;
 };
@@ -98,13 +99,10 @@ typedef struct {
 GType nice_stream_get_type (void);
 
 NiceStream *
-nice_stream_new (guint n_components, NiceAgent *agent);
+nice_stream_new (guint stream_id, guint n_components, NiceAgent *agent);
 
 void
-nice_stream_close (NiceStream *stream);
-
-gboolean
-nice_stream_all_components_ready (NiceStream *stream);
+nice_stream_close (NiceAgent *agent, NiceStream *stream);
 
 NiceComponent *
 nice_stream_find_component_by_id (NiceStream *stream, guint id);

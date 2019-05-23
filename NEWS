@@ -1,3 +1,32 @@
+libnice 0.1.16 (2019-05-09)
+===========================
+Add API to make it easier to implement ICE trickle
+Add async closing of agent, to cleanly close TURN allocations
+Add Google non-standard NOMINATION STUN attribute
+Fix tests on Windows
+Fix some racy tests
+
+libnice 0.1.15 (2018-12-27)
+===========================
+Add support for Regular Nomination
+Removal of the global lock over all agents
+Add method to compare candidate targets
+Added optional Meson build system, future releases will remove autotools
+Renamed all members of PseudoTcpState enum (compile-time API change)
+Now drops all packets from addresses that have not been validated by an ICE check
+Multiple improvements to ICE interoperability
+Improved RFC compliance
+Improved OC2007 compatibility mode alternate-server support
+
+libnice 0.1.14 (2017-04-03)
+===========================
+Improved RFC compliance
+Split verbose logs into a separate option
+Numerous bug fixes
+Use GnuTLS for hash functions
+Implement NewReno in PseudoTCP
+Requires GLib 2.44 GnuTLS 2.12
+
 libnice 0.1.13 (2015-04-28)
 ===========================
 Fix build on non-Windows platforms that don't have getifaddrs()

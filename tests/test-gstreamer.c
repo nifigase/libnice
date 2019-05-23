@@ -1,7 +1,7 @@
 /*
  * This file is part of the Nice GLib ICE library.
  *
- * (C) 1015 Kurento.
+ * (C) 2015 Kurento.
  *  Contact: Jose Antonio Santos Cadenas
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -34,7 +34,7 @@
  */
 
 #include <gst/check/gstcheck.h>
-#include <nice/agent.h>
+#include "agent.h"
 
 #define RTP_HEADER_SIZE 12
 #define RTP_PAYLOAD_SIZE 1024
@@ -105,7 +105,6 @@ create_buffer_list (void)
   GstBufferList *list;
   GstBuffer *rtp_buffer;
   GstBuffer *data_buffer;
-  gint total_size = 0;
 
   list = gst_buffer_list_new ();
 
@@ -122,8 +121,6 @@ create_buffer_list (void)
   /* Create a new group to hold the rtp header and the payload */
   gst_buffer_list_add (list, gst_buffer_append (rtp_buffer, data_buffer));
 
-  total_size += gst_buffer_get_size (rtp_buffer);
-
   /***  Second group, i.e. second packet. ***/
 
   /* Create the RTP header buffer */
@@ -136,8 +133,6 @@ create_buffer_list (void)
 
   /* Create a new group to hold the rtp header and the payload */
   gst_buffer_list_add (list, gst_buffer_append (rtp_buffer, data_buffer));
-
-  total_size += gst_buffer_get_size (rtp_buffer);
 
   /* Calculate the size of the data */
   data_size = 2 * RTP_HEADER_SIZE + 2 * RTP_PAYLOAD_SIZE;
@@ -231,6 +226,9 @@ GST_START_TEST (buffer_list_test)
 
   sink_agent = nice_agent_new (NULL, NICE_COMPATIBILITY_RFC5245);
   src_agent = nice_agent_new (NULL, NICE_COMPATIBILITY_RFC5245);
+
+  g_object_set (G_OBJECT (sink_agent), "upnp", FALSE, NULL);
+  g_object_set (G_OBJECT (src_agent), "upnp", FALSE, NULL);
 
   nice_agent_add_local_address (sink_agent, addr);
   nice_agent_add_local_address (src_agent, addr);

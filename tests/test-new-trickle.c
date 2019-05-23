@@ -1,7 +1,7 @@
 /*
  * This file is part of the Nice GLib ICE library.
  *
- * Unit test for ICE in dribble mode (adding remote candidates while gathering
+ * Unit test for ICE in trickle mode (adding remote candidates while gathering
  * local candidates).
  *
  * (C) 2012 Collabora Ltd.
@@ -269,7 +269,7 @@ static gpointer stun_thread_func (const gpointer user_data)
   return NULL;
 }
 
-static void set_credentials (NiceAgent *lagent, guint lstream,
+static void swap_credentials (NiceAgent *lagent, guint lstream,
     NiceAgent *ragent, guint rstream)
 {
   gchar *ufrag = NULL, *password = NULL;
@@ -279,17 +279,11 @@ static void set_credentials (NiceAgent *lagent, guint lstream,
 
   g_free (ufrag);
   g_free (password);
-
-  nice_agent_get_local_credentials (ragent, rstream, &ufrag, &password);
-  nice_agent_set_remote_credentials (lagent, lstream, ufrag, password);
-
-  g_free (ufrag);
-  g_free (password);
 }
 
 static void cb_candidate_gathering_done(NiceAgent *agent, guint stream_id, gpointer data)
 {
-  g_debug ("test-dribblemode:%s: %p", G_STRFUNC, data);
+  g_debug ("test-tricklemode:%s: %p", G_STRFUNC, data);
 
   if (GPOINTER_TO_UINT(data) == 1) {
     g_debug ("lagent finished gathering candidates");
@@ -305,14 +299,14 @@ static void cb_nice_recv (NiceAgent *agent, guint stream_id, guint component_id,
 {
   gint ret;
 
-  g_debug ("test-dribblemode:%s: %p", G_STRFUNC, user_data);
+  g_debug ("test-tricklemode:%s: %p", G_STRFUNC, user_data);
 
   ret = strncmp ("0000", buf, 4);
   if (ret == 0) {
     ret = strncmp ("00001234567812345678", buf, 16);
     g_assert (ret == 0);
 
-    g_debug ("test-dribblemode:%s: ragent recieved %d bytes : quit mainloop",
+    g_debug ("test-tricklemode:%s: ragent recieved %d bytes : quit mainloop",
              G_STRFUNC, len);
     data_received = TRUE;
     g_cancellable_cancel (global_cancellable);
@@ -323,7 +317,7 @@ static void cb_component_state_changed (NiceAgent *agent, guint stream_id, guint
 {
   gint ret;
 
-  g_debug ("test-dribblemode:%s: %p", G_STRFUNC, data);
+  g_debug ("test-tricklemode:%s: %p", G_STRFUNC, data);
 
   if(GPOINTER_TO_UINT(data) == 1) {
     global_lagent_state = state;
@@ -355,7 +349,7 @@ static void swap_candidates(NiceAgent *local, guint local_id, NiceAgent *remote,
 {
   GSList *cands = NULL;
 
-  g_debug ("test-dribblemode:%s", G_STRFUNC);
+  g_debug ("test-tricklemode:%s", G_STRFUNC);
   cands = nice_agent_get_local_candidates(local, local_id,
                                           NICE_COMPONENT_TYPE_RTP);
   g_assert(nice_agent_set_remote_candidates(remote, remote_id,
@@ -382,7 +376,7 @@ static void cb_agent_new_candidate(NiceAgent *agent, guint stream_id, guint comp
   gpointer tmp;
   guint id;
 
-  g_debug ("test-dribblemode:%s: %p", G_STRFUNC, user_data);
+  g_debug ("test-tricklemode:%s: %p", G_STRFUNC, user_data);
 
   tmp = g_object_get_data (G_OBJECT (other), "id");
   id = GPOINTER_TO_UINT (tmp);
@@ -483,7 +477,7 @@ static void cleanup(NiceAgent *lagent,  NiceAgent *ragent)
 
 static void standard_test(NiceAgent *lagent, NiceAgent *ragent)
 {
-  g_debug ("test-dribblemode:%s", G_STRFUNC);
+  g_debug ("test-tricklemode:%s", G_STRFUNC);
 
   got_stun_packet = FALSE;
   init_test (lagent, ragent, FALSE);
@@ -499,13 +493,12 @@ static void standard_test(NiceAgent *lagent, NiceAgent *ragent)
     g_main_context_iteration (NULL, TRUE);
   g_cancellable_reset (global_cancellable);
   g_assert (ragent_candidate_gathering_done);
+  g_assert (nice_agent_peer_candidate_gathering_done (lagent, global_ls_id));
 
-  set_credentials (lagent, global_ls_id, ragent, global_rs_id);
 
   g_debug ("Setting local candidates of ragent as remote candidates of lagent");
-  swap_candidates (ragent, global_rs_id,
-                   lagent, global_ls_id,
-                   TRUE);
+  swap_candidates (ragent, global_rs_id, lagent, global_ls_id, TRUE);
+  swap_credentials (ragent, global_rs_id, lagent, global_ls_id);
 
   while (!data_received)
     g_main_context_iteration (NULL, TRUE);
@@ -514,14 +507,15 @@ static void standard_test(NiceAgent *lagent, NiceAgent *ragent)
             data_received);
 
   g_debug ("Setting local candidates of lagent as remote candidates of ragent");
-  swap_candidates (lagent, global_ls_id,
-                   ragent, global_rs_id,
-                   FALSE);
+  swap_candidates (lagent, global_ls_id, ragent, global_rs_id, FALSE);
+  swap_credentials (lagent, global_ls_id, ragent, global_rs_id);
+
   while (!lagent_candidate_gathering_done)
     g_main_context_iteration (NULL, TRUE);
   g_cancellable_reset (global_cancellable);
 
   g_assert (lagent_candidate_gathering_done);
+  g_assert (nice_agent_peer_candidate_gathering_done (ragent, global_rs_id));
 
   while (global_ragent_state < NICE_COMPONENT_STATE_CONNECTED)
     g_main_context_iteration (NULL, TRUE);
@@ -535,7 +529,7 @@ static void standard_test(NiceAgent *lagent, NiceAgent *ragent)
 
 static void bad_credentials_test(NiceAgent *lagent, NiceAgent *ragent)
 {
-  g_debug ("test-dribblemode:%s", G_STRFUNC);
+  g_debug ("test-tricklemode:%s", G_STRFUNC);
 
   init_test (lagent, ragent, FALSE);
 
@@ -556,23 +550,23 @@ static void bad_credentials_test(NiceAgent *lagent, NiceAgent *ragent)
     g_main_context_iteration (NULL, TRUE);
   g_cancellable_reset (global_cancellable);
   g_assert (ragent_candidate_gathering_done);
+  g_assert (nice_agent_peer_candidate_gathering_done (lagent, global_ls_id));
 
-  swap_candidates (ragent, global_rs_id,
-                   lagent, global_ls_id,
-                   FALSE);
+  g_debug ("Setting local candidates of ragent as remote candidates of lagent");
+  swap_candidates (ragent, global_rs_id, lagent, global_ls_id, FALSE);
+
   while (global_lagent_state != NICE_COMPONENT_STATE_FAILED)
     g_main_context_iteration (NULL, TRUE);
   g_cancellable_reset (global_cancellable);
 
   // Set the correct credentials and swap candidates
-  set_credentials (lagent, global_ls_id, ragent, global_rs_id);
-  swap_candidates (ragent, global_rs_id,
-                   lagent, global_ls_id,
-                   FALSE);
+  g_debug ("Setting local candidates of ragent as remote candidates of lagent");
+  swap_candidates (ragent, global_rs_id, lagent, global_ls_id, FALSE);
+  swap_credentials (lagent, global_ls_id, ragent, global_rs_id);
 
-  swap_candidates (lagent, global_ls_id,
-                   ragent, global_rs_id,
-                   FALSE);
+  g_debug ("Setting local candidates of lagent as remote candidates of ragent");
+  swap_candidates (lagent, global_ls_id, ragent, global_rs_id, FALSE);
+  swap_credentials (ragent, global_rs_id, lagent, global_ls_id);
 
   while (!data_received)
     g_main_context_iteration (NULL, TRUE);
@@ -588,6 +582,7 @@ static void bad_credentials_test(NiceAgent *lagent, NiceAgent *ragent)
   g_cancellable_reset (global_cancellable);
 
   g_assert (lagent_candidate_gathering_done);
+  g_assert (nice_agent_peer_candidate_gathering_done (ragent, global_rs_id));
 
   cleanup (lagent, ragent);
 }
@@ -596,7 +591,7 @@ static void bad_candidate_test(NiceAgent *lagent,NiceAgent *ragent)
 {
   NiceCandidate *cand =  NULL;
 
-  g_debug ("test-dribblemode:%s", G_STRFUNC);
+  g_debug ("test-tricklemode:%s", G_STRFUNC);
 
   init_test (lagent, ragent, FALSE);
 
@@ -613,6 +608,7 @@ static void bad_candidate_test(NiceAgent *lagent,NiceAgent *ragent)
   g_cancellable_reset (global_cancellable);
 
   g_assert (ragent_candidate_gathering_done);
+  g_assert (nice_agent_peer_candidate_gathering_done (lagent, global_ls_id));
 
   add_bad_candidate (lagent, global_ls_id, cand);
 
@@ -621,6 +617,8 @@ static void bad_candidate_test(NiceAgent *lagent,NiceAgent *ragent)
     g_main_context_iteration (NULL, TRUE);
   g_cancellable_reset (global_cancellable);
 
+  g_assert (nice_agent_peer_candidate_gathering_done (ragent, global_rs_id));
+
   // connchecks will fail causing this mainloop to quit
   while (global_lagent_state != NICE_COMPONENT_STATE_FAILED)
     g_main_context_iteration (NULL, TRUE);
@@ -628,15 +626,14 @@ static void bad_candidate_test(NiceAgent *lagent,NiceAgent *ragent)
 
   g_assert (global_lagent_state == NICE_COMPONENT_STATE_FAILED &&
             !data_received);
-  set_credentials (lagent, global_ls_id, ragent, global_rs_id);
 
-  swap_candidates (ragent, global_rs_id,
-                   lagent, global_ls_id,
-                   FALSE);
+  g_debug ("Setting local candidates of ragent as remote candidates of lagent");
+  swap_candidates (ragent, global_rs_id, lagent, global_ls_id, FALSE);
+  swap_credentials (ragent, global_rs_id, lagent, global_ls_id);
 
-  swap_candidates (lagent, global_ls_id,
-                   ragent, global_rs_id,
-                   FALSE);
+  g_debug ("Setting local candidates of lagent as remote candidates of ragent");
+  swap_candidates (lagent, global_ls_id, ragent, global_rs_id, FALSE);
+  swap_credentials (lagent, global_ls_id, ragent, global_rs_id);
 
   while (!data_received)
     g_main_context_iteration (NULL, TRUE);
@@ -652,10 +649,11 @@ static void bad_candidate_test(NiceAgent *lagent,NiceAgent *ragent)
 
 static void new_candidate_test(NiceAgent *lagent, NiceAgent *ragent)
 {
-  g_debug ("test-dribblemode:%s", G_STRFUNC);
+  g_debug ("test-tricklemode:%s", G_STRFUNC);
 
   init_test (lagent, ragent, TRUE);
-  set_credentials (lagent, global_ls_id, ragent, global_rs_id);
+  swap_credentials (lagent, global_ls_id, ragent, global_rs_id);
+  swap_credentials (ragent, global_rs_id, lagent, global_ls_id);
 
   nice_agent_gather_candidates (lagent, global_ls_id);
   while (!got_stun_packet)
@@ -668,6 +666,7 @@ static void new_candidate_test(NiceAgent *lagent, NiceAgent *ragent)
   while (!ragent_candidate_gathering_done)
     g_main_context_iteration (NULL, TRUE);
   g_cancellable_reset (global_cancellable);
+  g_assert (nice_agent_peer_candidate_gathering_done (lagent, global_ls_id));
 
   // Wait for data
   while (!data_received)
@@ -682,10 +681,10 @@ static void new_candidate_test(NiceAgent *lagent, NiceAgent *ragent)
   g_mutex_unlock (stun_mutex_ptr);
 
   // Wait for lagent to finish gathering candidates
-  while (!lagent_candidate_gathering_done ||
-      !lagent_candidate_gathering_done)
+  while (!lagent_candidate_gathering_done)
     g_main_context_iteration (NULL, TRUE);
   g_cancellable_reset (global_cancellable);
+  g_assert (nice_agent_peer_candidate_gathering_done (ragent, global_rs_id));
 
   g_assert (lagent_candidate_gathering_done);
   g_assert (ragent_candidate_gathering_done);
@@ -748,6 +747,9 @@ int main(void)
   g_object_set (G_OBJECT (lagent), "ice-tcp", FALSE,  NULL);
   g_object_set (G_OBJECT (ragent), "ice-tcp", FALSE,  NULL);
 
+  g_object_set (G_OBJECT (lagent), "ice-trickle", TRUE, NULL);
+  g_object_set (G_OBJECT (ragent), "ice-trickle", TRUE, NULL);
+
   g_object_set (G_OBJECT (lagent), "controlling-mode", TRUE, NULL);
   g_object_set (G_OBJECT (ragent), "controlling-mode", FALSE, NULL);
 
@@ -781,7 +783,9 @@ int main(void)
   // Do this to make sure the STUN thread exits
   exit_stun_thread = TRUE;
   drop_stun_packets = TRUE;
+  send_stun = FALSE;
   send_dummy_data ();
+  g_cond_signal (stun_signal_ptr);
 
   g_object_add_weak_pointer (G_OBJECT (lagent), (gpointer *) &lagent);
   g_object_add_weak_pointer (G_OBJECT (ragent), (gpointer *) &ragent);

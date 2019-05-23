@@ -101,6 +101,14 @@ static void cb_new_selected_pair(NiceAgent *agent, guint stream_id,
     ++global_ragent_cands;
 }
 
+static void cb_closed (GObject *src, GAsyncResult *res, gpointer data)
+{
+  NiceAgent *agent = NICE_AGENT (src);
+  g_debug ("test-turn:%s: %p", G_STRFUNC, agent);
+
+  *((gboolean *)data) = TRUE;
+}
+
 static void set_candidates (NiceAgent *from, guint from_stream,
     NiceAgent *to, guint to_stream, guint component, gboolean remove_non_relay,
     gboolean force_relay)
@@ -154,6 +162,8 @@ run_test(guint turn_port, gboolean is_ipv6,
   NiceAddress localaddr;
   guint ls_id, rs_id;
   gulong timer_id;
+  gboolean lagent_closed = FALSE;
+  gboolean ragent_closed = FALSE;
 
   if (is_ipv6)
     localhost = "::1";
@@ -247,10 +257,18 @@ run_test(guint turn_port, gboolean is_ipv6,
   nice_agent_remove_stream (lagent, ls_id);
   nice_agent_remove_stream (ragent, rs_id);
 
-  g_source_remove (timer_id);
+  nice_agent_close_async (lagent, cb_closed, &lagent_closed);
+  nice_agent_close_async (ragent, cb_closed, &ragent_closed);
 
   g_clear_object(&lagent);
   g_clear_object(&ragent);
+
+  while (!lagent_closed || !ragent_closed) {
+    g_main_context_iteration (NULL, TRUE);
+  }
+
+  g_source_remove (timer_id);
+
 }
 
 guint global_turn_port;

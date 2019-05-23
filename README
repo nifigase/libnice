@@ -5,7 +5,7 @@ Nice: GLib ICE library
 Copyright
 ---------
 
- (C) 2006-2011 Collabora Ltd.
+ (C) 2006-2018 Collabora Ltd.
  (C) 2006-2011 Nokia Corporation
 
 License
@@ -16,10 +16,12 @@ See the file COPYING.
 Requirements
 ------------
 
- glib >= 2.10
+ glib >= 2.44
  pkg-config
+ gnutls >= 2.12.0 or OpenSSL
  gupnp-igd >= 0.1.2 (optional)
  gstreamer-0.10 >= 0.10.0 (optional)
+ gstreamer-1.0 (optional)
 
 Build instructions
 ------------------
@@ -29,9 +31,6 @@ To build on Linux and Mac, you only need to type the usual commands :
 Please refer to the INSTALL file for more details.
 If you are building from git, you must first run the ./autogen.sh script
 to generate the configure file for you.
-
-To build on Windows, please refer to the README.win32 file for build instructions
-using Microsoft Visual Studio.
 
 Structure
 ---------
@@ -50,7 +49,7 @@ Relevant standards
 
 These standards are relevant to nice's current implementation.
 
-ICE draft 15
+ICE RFC 5245
   http://tools.ietf.org/html/rfc5245
 STUN
   http://tools.ietf.org/html/rfc3489

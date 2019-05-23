@@ -377,6 +377,50 @@ typedef enum
   NICE_PROXY_TYPE_LAST = NICE_PROXY_TYPE_HTTP,
 } NiceProxyType;
 
+/**
+ * NiceNominationMode:
+ * @NICE_NOMINATION_MODE_AGGRESSIVE: Aggressive nomination mode
+ * @NICE_NOMINATION_MODE_REGULAR: Regular nomination mode
+ *
+ * An enum to specity the kind of nomination mode to use by
+ * the agent, as described in RFC 5245. Two modes exists,
+ * regular and aggressive. They differ by the way the controlling
+ * agent chooses to put the USE-CANDIDATE attribute in its STUN
+ * messages. The aggressive mode is supposed to nominate a pair
+ * faster, than the regular mode, potentially causing the nominated
+ * pair to change until the connection check completes.
+ *
+ * Since: 0.1.15
+ */
+typedef enum
+{
+  NICE_NOMINATION_MODE_REGULAR = 0,
+  NICE_NOMINATION_MODE_AGGRESSIVE,
+} NiceNominationMode;
+
+/**
+ * NiceAgentOption:
+ * @NICE_AGENT_OPTION_REGULAR_NOMINATION: Enables regular nomination, default
+ *  is aggrssive mode (see #NiceNominationMode).
+ * @NICE_AGENT_OPTION_RELIABLE: Enables reliable mode, possibly using PseudoTCP, *  see nice_agent_new_reliable().
+ * @NICE_AGENT_OPTION_LITE_MODE: Enable lite mode
+ * @NICE_AGENT_OPTION_ICE_TRICKLE: Enable ICE trickle mode
+ * @NICE_AGENT_OPTION_SUPPORT_RENOMINATION: Enable renomination triggered by NOMINATION STUN attribute
+ * proposed here: https://tools.ietf.org/html/draft-thatcher-ice-renomination-00
+ *
+ * These are options that can be passed to nice_agent_new_full(). They set
+ * various properties on the agent. Not including them sets the property to
+ * the other value.
+ *
+ * Since: 0.1.15
+ */
+typedef enum {
+  NICE_AGENT_OPTION_REGULAR_NOMINATION = 1 << 0,
+  NICE_AGENT_OPTION_RELIABLE = 1 << 1,
+  NICE_AGENT_OPTION_LITE_MODE = 1 << 2,
+  NICE_AGENT_OPTION_ICE_TRICKLE = 1 << 3,
+  NICE_AGENT_OPTION_SUPPORT_RENOMINATION = 1 << 4,
+} NiceAgentOption;
 
 /**
  * NiceAgentRecvFunc:
@@ -429,6 +473,26 @@ NiceAgent *
 nice_agent_new_reliable (GMainContext *ctx, NiceCompatibility compat);
 
 /**
+ * nice_agent_new_full:
+ * @ctx: The Glib Mainloop Context to use for timers
+ * @compat: The compatibility mode of the agent
+ * @flags: Flags to set the properties
+ *
+ * Create a new #NiceAgent with parameters that must be be defined at
+ * construction time.
+ * The returned object must be freed with g_object_unref()
+ * <para> See also: #NiceNominationMode and #NiceAgentOption</para>
+ *
+ * Since: 0.1.15
+ *
+ * Returns: The new agent GObject
+ */
+NiceAgent *
+nice_agent_new_full (GMainContext *ctx,
+  NiceCompatibility compat,
+  NiceAgentOption flags);
+
+/**
  * nice_agent_add_local_address:
  * @agent: The #NiceAgent Object
  * @addr: The address to listen to
@@ -446,7 +510,6 @@ nice_agent_new_reliable (GMainContext *ctx, NiceCompatibility compat);
  */
 gboolean
 nice_agent_add_local_address (NiceAgent *agent, NiceAddress *addr);
-
 
 /**
  * nice_agent_add_stream:
@@ -1479,15 +1542,6 @@ nice_agent_generate_local_candidate_sdp (
  * Parse an SDP string and extracts candidates and credentials from it and sets
  * them on the agent.
  *
- <note>
-   <para>
-    This function will return an error if a stream has not been assigned a name
-    with nice_agent_set_stream_name() as it becomes troublesome to assign the
-    streams from the agent to the streams in the SDP.
-   </para>
- </note>
- *
- *
  * <para>See also: nice_agent_set_stream_name() </para>
  * <para>See also: nice_agent_generate_local_sdp() </para>
  * <para>See also: nice_agent_parse_remote_stream_sdp() </para>
@@ -1631,6 +1685,51 @@ NiceComponentState
 nice_agent_get_component_state (NiceAgent *agent,
     guint stream_id,
     guint component_id);
+
+/**
+ * nice_agent_peer_candidate_gathering_done:
+ * @agent: The #NiceAgent Object
+ * @stream_id: The ID of the stream
+ *
+ * Notifies the agent that the remote peer has concluded candidate gathering and
+ * thus no more remote candidates are expected to arrive for @stream_id.
+ *
+ * This will allow the stream components without a successful connectivity check
+ * to stop waiting for more candidates to come and finally transit into
+ * %NICE_COMPONENT_STATE_FAILED.
+ *
+ * Calling the function has an effect only when #NiceAgent:trickle-ice is %TRUE.
+ *
+ * Returns: %FALSE if the stream could not be found, %TRUE otherwise
+ *
+ * Since: 0.1.16
+ */
+gboolean
+nice_agent_peer_candidate_gathering_done (
+    NiceAgent *agent,
+    guint stream_id);
+
+/**
+ * nice_agent_close_async:
+ * @agent: The #NiceAgent object
+ * @callback: (nullable): A callback that will be called when the closing is
+ *  complete
+ * @callback_data: (nullable): A pointer that will be passed to the callback
+ *
+ * Asynchronously closes resources the agent has allocated on remote servers.
+ *
+ * The agent will call the callback in the current #GMainContext in
+ * which this function is called. The #GAsyncResult in the callback
+ * can be ignored as this operation never fails.
+ *
+ * Calling this function before freeing the agent makes sure the allocated relay
+ * ports aren't left behind on TURN server but properly removed.
+ *
+ * Since: 0.1.16
+ */
+void
+nice_agent_close_async (NiceAgent *agent, GAsyncReadyCallback callback,
+    gpointer callback_data);
 
 G_END_DECLS
 

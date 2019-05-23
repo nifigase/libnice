@@ -58,12 +58,14 @@ nice_stream_finalize (GObject *obj);
  * @brief ICE stream functionality
  */
 NiceStream *
-nice_stream_new (guint n_components, NiceAgent *agent)
+nice_stream_new (guint stream_id, guint n_components, NiceAgent *agent)
 {
   NiceStream *stream = NULL;
   guint n;
 
   stream = g_object_new (NICE_TYPE_STREAM, NULL);
+
+  stream->id = stream_id;
 
   /* Create the components. */
   for (n = 0; n < n_components; n++) {
@@ -75,17 +77,19 @@ nice_stream_new (guint n_components, NiceAgent *agent)
 
   stream->n_components = n_components;
 
+  stream->peer_gathering_done = !agent->use_ice_trickle;
+
   return stream;
 }
 
 void
-nice_stream_close (NiceStream *stream)
+nice_stream_close (NiceAgent *agent, NiceStream *stream)
 {
   GSList *i;
 
   for (i = stream->components; i; i = i->next) {
     NiceComponent *component = i->data;
-    nice_component_close (component);
+    nice_component_close (agent, component);
   }
 }
 
@@ -102,27 +106,6 @@ nice_stream_find_component_by_id (NiceStream *stream, guint id)
 
   return NULL;
 }
-
-/*
- * Returns true if all components of the stream are either
- * 'CONNECTED' or 'READY' (connected plus nominated).
- */
-gboolean
-nice_stream_all_components_ready (NiceStream *stream)
-{
-  GSList *i;
-
-  for (i = stream->components; i; i = i->next) {
-    NiceComponent *component = i->data;
-    if (component &&
-	!(component->state == NICE_COMPONENT_STATE_CONNECTED ||
-	 component->state == NICE_COMPONENT_STATE_READY))
-      return FALSE;
-  }
-
-  return TRUE;
-}
-
 
 /*
  * Initialized the local crendentials for the stream.

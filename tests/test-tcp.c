@@ -38,6 +38,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <gio/gnetworking.h>
 
 #include "socket.h"
 
@@ -88,14 +89,16 @@ main (void)
   NiceAddress active_bind_addr, passive_bind_addr;
   GSource *srv_listen_source, *srv_input_source, *cli_input_source;
 
+  g_networking_init ();
+
   mainloop = g_main_loop_new (NULL, FALSE);
 
   nice_address_init (&active_bind_addr);
   g_assert (nice_address_set_from_string (&active_bind_addr, "::1"));
 
   nice_address_init (&passive_bind_addr);
-  g_assert (nice_address_set_from_string (&passive_bind_addr, "::1"));
-  nice_address_set_port (&passive_bind_addr, 23456);
+  g_assert (nice_address_set_from_string (&passive_bind_addr, "127.0.0.1"));
+  nice_address_set_port (&passive_bind_addr, 0);
 
   nice_address_init (&tmp);
 
@@ -116,7 +119,7 @@ main (void)
       &active_bind_addr);
   g_assert (active_sock);
 
-  client = nice_tcp_active_socket_connect (active_sock, &passive_bind_addr);
+  client = nice_tcp_active_socket_connect (active_sock, &passive_sock->addr);
   g_assert (client);
   nice_socket_free (active_sock);
   active_sock = NULL;
@@ -135,9 +138,8 @@ main (void)
   g_source_attach (cli_input_source, g_main_loop_get_context (mainloop));
 
   g_assert (nice_address_get_port (&client->addr) != 0);
-  g_assert (nice_address_get_port (&server->addr) == 23456);
 
-  g_assert (nice_address_set_from_string (&tmp, "::1"));
+  g_assert (nice_address_set_from_string (&tmp, "127.0.0.1"));
   nice_address_set_port (&tmp, nice_address_get_port (&server->addr));
   g_assert (nice_address_get_port (&tmp) != 0);
 

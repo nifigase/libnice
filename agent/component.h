@@ -69,7 +69,6 @@ typedef struct _IncomingCheck IncomingCheck;
 
 struct _CandidatePairKeepalive
 {
-  NiceAgent *agent;
   GSource *tick_source;
   guint stream_id;
   guint component_id;
@@ -159,12 +158,14 @@ struct _NiceComponent {
   NiceComponentState state;
   GSList *local_candidates;    /* list of NiceCandidate objs */
   GSList *remote_candidates;   /* list of NiceCandidate objs */
+  GList *valid_candidates;     /* list of owned remote NiceCandidates that are part of valid pairs */
   GSList *socket_sources;      /* list of SocketSource objs; must only grow monotonically */
   guint socket_sources_age;    /* incremented when socket_sources changes */
-  GSList *incoming_checks;     /* list of IncomingCheck objs */
+  GQueue incoming_checks;     /* list of IncomingCheck objs */
   GList *turn_servers;             /* List of TurnServer objs */
   CandidatePair selected_pair; /* independent from checklists, 
 				    see ICE 11.1. "Sending Media" (ID-19) */
+  gboolean fallback_mode;      /* in this case, accepts packets from all, ignore candidate validation */
   NiceCandidate *restart_candidate; /* for storing active remote candidate during a restart */
   NiceCandidate *turn_candidate; /* for storing active turn candidate if turn servers have been cleared */
   /* I/O handling. The main context must always be non-NULL, and is used for all
@@ -198,10 +199,8 @@ struct _NiceComponent {
                                                 recv_messages */
   GError **recv_buf_error;          /* error information about failed reads */
 
-  NiceAgent *agent;  /* unowned, immutable: can be accessed without holding the
-                      * agent lock */
-  NiceStream *stream;  /* unowned, immutable: can be accessed without holding
-                        * the agent lock */
+  GWeakRef agent_ref;
+  guint stream_id;
 
   StunAgent stun_agent; /* This stun agent is used to validate all stun requests */
 
@@ -236,7 +235,7 @@ NiceComponent *
 nice_component_new (guint component_id, NiceAgent *agent, NiceStream *stream);
 
 void
-nice_component_close (NiceComponent *component);
+nice_component_close (NiceAgent *agent, NiceComponent *component);
 
 gboolean
 nice_component_find_pair (NiceComponent *component, NiceAgent *agent,
@@ -246,7 +245,7 @@ void
 nice_component_restart (NiceComponent *component);
 
 void
-nice_component_update_selected_pair (NiceComponent *component,
+nice_component_update_selected_pair (NiceAgent *agent, NiceComponent *component,
     const CandidatePair *pair);
 
 NiceCandidate *
@@ -261,7 +260,8 @@ void
 nice_component_attach_socket (NiceComponent *component, NiceSocket *nsocket);
 
 void
-nice_component_remove_socket (NiceComponent *component, NiceSocket *nsocket);
+nice_component_remove_socket (NiceAgent *agent, NiceComponent *component,
+    NiceSocket *nsocket);
 void
 nice_component_detach_all_sockets (NiceComponent *component);
 
@@ -283,12 +283,12 @@ nice_component_set_io_callback (NiceComponent *component,
     NiceInputMessage *recv_messages, guint n_recv_messages,
     GError **error);
 void
-nice_component_emit_io_callback (NiceComponent *component,
+nice_component_emit_io_callback (NiceAgent *agent, NiceComponent *component,
     const guint8 *buf, gsize buf_len);
 gboolean
 nice_component_has_io_callback (NiceComponent *component);
 void
-nice_component_clean_turn_servers (NiceComponent *component);
+nice_component_clean_turn_servers (NiceAgent *agent, NiceComponent *component);
 
 
 TurnServer *
@@ -300,6 +300,14 @@ turn_server_ref (TurnServer *turn);
 
 void
 turn_server_unref (TurnServer *turn);
+
+void
+nice_component_add_valid_candidate (NiceAgent *agent, NiceComponent *component,
+    const NiceCandidate *candidate);
+
+gboolean
+nice_component_verify_remote_candidate (NiceComponent *component,
+    const NiceAddress *address, NiceSocket *nicesock);
 
 
 G_END_DECLS

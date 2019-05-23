@@ -191,21 +191,21 @@ nice_candidate_ice_local_preference (const NiceCandidate *candidate)
     {
       case NICE_CANDIDATE_TRANSPORT_TCP_ACTIVE:
         if (candidate->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE ||
-            candidate->type == NICE_CANDIDATE_TYPE_PREF_NAT_ASSISTED)
+            candidate->type == NICE_CANDIDATE_TYPE_HOST)
           direction_preference = 4;
         else
           direction_preference = 6;
         break;
       case NICE_CANDIDATE_TRANSPORT_TCP_PASSIVE:
         if (candidate->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE ||
-            candidate->type == NICE_CANDIDATE_TYPE_PREF_NAT_ASSISTED)
+            candidate->type == NICE_CANDIDATE_TYPE_HOST)
           direction_preference = 2;
         else
           direction_preference = 4;
         break;
       case NICE_CANDIDATE_TRANSPORT_TCP_SO:
         if (candidate->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE ||
-            candidate->type == NICE_CANDIDATE_TYPE_PREF_NAT_ASSISTED)
+            candidate->type == NICE_CANDIDATE_TYPE_HOST)
           direction_preference = 6;
         else
           direction_preference = 2;
@@ -359,4 +359,15 @@ nice_candidate_copy (const NiceCandidate *candidate)
   copy->password = g_strdup (copy->password);
 
   return copy;
+}
+
+NICEAPI_EXPORT gboolean
+nice_candidate_equal_target (const NiceCandidate *candidate1,
+    const NiceCandidate *candidate2)
+{
+  g_return_val_if_fail (candidate1 != NULL, FALSE);
+  g_return_val_if_fail (candidate2 != NULL, FALSE);
+
+  return (candidate1->transport == candidate2->transport &&
+      nice_address_equal (&candidate1->addr, &candidate2->addr));
 }

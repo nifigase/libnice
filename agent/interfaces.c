@@ -143,7 +143,7 @@ nice_interfaces_get_local_interfaces (void)
   struct ifconf ifc;
 
   if ((sockfd = socket (AF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0) {
-    nice_debug ("error : Cannot open socket to retreive interface list");
+    nice_debug ("error : Cannot open socket to retrieve interface list");
     return NULL;
   }
 
@@ -276,6 +276,12 @@ nice_interfaces_get_local_ips (gboolean include_loopback)
         nice_debug ("Ignoring loopback interface");
         g_free (addr_string);
       }
+#ifdef IGNORED_IFACE_PREFIX
+    } else if (g_str_has_prefix (ifa->ifa_name, IGNORED_IFACE_PREFIX)) {
+      nice_debug ("Ignoring interface %s as it matches prefix %s",
+          ifa->ifa_name, IGNORED_IFACE_PREFIX);
+      g_free (addr_string);
+#endif
     } else {
       if (nice_interfaces_is_private_ip (ifa->ifa_addr))
         ips = add_ip_to_list (ips, addr_string, TRUE);
@@ -306,7 +312,7 @@ nice_interfaces_get_local_ips (gboolean include_loopback)
   gchar *loopback = NULL;
 
   if ((sockfd = socket (AF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0) {
-    nice_debug ("Error : Cannot open socket to retreive interface list");
+    nice_debug ("Error : Cannot open socket to retrieve interface list");
     return NULL;
   }
 
@@ -389,7 +395,7 @@ nice_interfaces_get_ip_for_interface (gchar *interface_name)
   g_strlcpy (ifr.ifr_name, interface_name, sizeof (ifr.ifr_name));
 
   if ((sockfd = socket (AF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0) {
-    nice_debug ("Error : Cannot open socket to retreive interface list");
+    nice_debug ("Error : Cannot open socket to retrieve interface list");
     return NULL;
   }
 
@@ -452,7 +458,7 @@ SOCKET nice_interfaces_get_WSA_socket ()
 
 
   if ((sock = socket (AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
-    nice_debug ("Error : Could not open socket to retreive interface list,"
+    nice_debug ("Error : Could not open socket to retrieve interface list,"
         " error no : %d", WSAGetLastError ());
     return INVALID_SOCKET;
   }

@@ -17,8 +17,8 @@ SUBDIRS = \
 	agent \
 	nice \
 	gst \
-	docs \
 	tests \
+	docs \
 	examples
 
 DISTCHECK_CONFIGURE_FLAGS = --disable-assert -enable-gtk-doc --enable-introspection
@@ -26,38 +26,20 @@ DISTCHECK_CONFIGURE_FLAGS = --disable-assert -enable-gtk-doc --enable-introspect
 EXTRA_DIST = \
 	COPYING.LGPL \
 	COPYING.MPL \
-	README.win32 \
 	autogen.sh \
 	common.mk \
 	scripts/lcov.mk \
 	scripts/lcov.sh \
-	scripts/valgrind.sh \
-	win32 \
-	win32/vs9/libnice.def \
-	m4/introspection.m4
+	scripts/valgrind-test-driver \
+	m4/introspection.m4 \
+	meson.build \
+	meson_options.txt
 
 MAINTAINERCLEANFILES = ar-lib
 
 dist_check_SCRIPTS = \
 	scripts/check-symbols.sh \
 	scripts/make-symbol-list.sh
-
-# Generate the win32 DLL symbol export file.
-# The stun_*() symbols at the end have historically been exported on Windows
-# but not Linux, for no particular reason. They can’t be removed without
-# breaking ABI. FIXME: Remove them when we next break ABI.
-win32/vs9/libnice.def: nice/libnice.sym
-	$(MKDIR_P) $(dir $@)
-	$(AM_V_GEN)(echo "LIBRARY libnice"; \
-	            echo ""; \
-	            echo "EXPORTS"; \
-	            echo ""; \
-	            cat $<; \
-	            echo "stun_debug"; \
-	            echo "stun_debug_bytes"; \
-	            echo "stun_hash_creds") > $@
-
-CLEANFILES += win32/vs9/libnice.def
 
 lcov:
 	find -name '*.gcda' -delete
