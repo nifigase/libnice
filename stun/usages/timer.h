@@ -145,7 +145,7 @@ struct stun_timer_s {
  *
  * The default maximum retransmissions allowed before a timer decides to timeout
  */
-#define STUN_TIMER_DEFAULT_MAX_RETRANSMISSIONS 3
+#define STUN_TIMER_DEFAULT_MAX_RETRANSMISSIONS 7
 
 /**
  * STUN_TIMER_DEFAULT_RELIABLE_TIMEOUT:
